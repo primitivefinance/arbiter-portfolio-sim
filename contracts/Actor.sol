@@ -180,10 +180,9 @@ contract Arbitrageur {
 }
 
 contract Actor is Arbitrageur, ArbiterContract {
-    function start(bytes memory input)
+    function start( address weth_, address portfolio)
         public
         override
-        returns (bytes memory output)
     { }
 
     function execute(address target, bytes calldata data) external {

@@ -26,15 +26,15 @@ contract Entrypoint is ArbiterContract {
      * @notice
      * Called by SimulationManager to initialize the simulation in setup.rs.
      *
-     * @param input abi.encode(weth, portfolio)
+     * @param weth_ weth address
+     * @param portfolio portfolio address
      */
-    function start(bytes memory input)
+    function start(address weth_, address portfolio)
         public
         override
-        returns (bytes memory output)
     {
-        (address weth_, address portfolio) =
-            abi.decode(input, (address, address));
+        // (address weth_, address portfolio) =
+        //     abi.decode(input, (address, address));
 
         // actor
         _actor = address(new Actor());
@@ -67,7 +67,7 @@ contract Entrypoint is ArbiterContract {
         _approve(token1, spenders);
 
         // Initialize state for portfolio.
-        _init(input);
+        _init();
     }
 
     function _approve(address token, address spender) internal {
@@ -85,8 +85,8 @@ contract Entrypoint is ArbiterContract {
         }
     }
 
-    function _init(bytes memory input) internal {
-        input; // dont use
+    function _init() internal {
+        // input; // dont use
 
         // Create the pair.
         IPortfolio(payable(subject())).createPair(token0, token1);

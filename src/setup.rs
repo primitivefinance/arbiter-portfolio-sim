@@ -1,6 +1,6 @@
 use arbiter_core::{middleware::RevmMiddleware, bindings::liquid_exchange::LiquidExchange};
 use std::sync::Arc;
-use crate::bindings::{external_normal_strategy_lib, i_portfolio_actions::CreatePoolCall, actor, entrypoint, exchange, mock_erc20, portfolio, weth::WETH};
+use crate::bindings::{external_normal_strategy_lib, i_portfolio_actions::CreatePoolCall, actor, entrypoint::Entrypoint, exchange, mock_erc20, portfolio, weth::WETH};
 // dynamic imports... generate with build.sh
 use ethers::{
     abi::{encode_packed, Token, Tokenize},
@@ -15,53 +15,39 @@ use revm::primitives::B160;
 // use crate::config::SimConfig;
 
 pub async fn run(
-    deplyer: Arc<RevmMiddleware>,
+    deployer: Arc<RevmMiddleware>,
     // config: &SimConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // let _ = config; // todo: use config vars for create pool.
 
     // Deploy weth
-    let weth = WETH::deploy(deplyer, ()).unwrap().send().await?;
+    let weth = WETH::deploy(deployer, ()).unwrap().send().await?;
 
     // Deploy portfolio
-    let portfolio = portfolio::Portfolio::deploy(deplyer,         (weth.address(),
+    let portfolio = portfolio::Portfolio::deploy(deployer, (weth.address(),
         Address::from(B160::zero()),
         Address::from(B160::zero()),
     )).unwrap().send().await?;
 
     // Deploy Entrypoint
-    let entrypoint = entrypoint::Entrypoint::deploy(deplyer, (portfolio.address(), weth.address())).unwrap().send().await?;
+    let entrypoint = Entrypoint::deploy(deployer, (portfolio.address(), weth.address())).unwrap().send().await?;
 
-    // Add deployed contracts to manager
 
-    // ask alex or matt about this
-    // let _ = entrypoint.start(Bytes::from((weth.address(), portfolio.address())));
+    // Start entrypoint deploys the exchange and makes the pool.
+    let reciept = entrypoint.start(weth.address(), portfolio.address()).send().await?.await?.unwrap();
 
-    let exchange = LiquidExchange::deploy(deplyer, (weth.address(), portfolio.address())).unwrap().send().await?;
 
-    // let exchange_address_bytes = B160::from(exchange_address.as_fixed_bytes());
-    // let exchange_contract =
-    //     SimulationContract::bind(exchange::EXCHANGE_ABI.clone(), exchange_address_bytes);
+    let token_0_address = entrypoint.token_0().call().await?;
+    let token0 = mock_erc20::MockERC20::new(token_0_address, deployer.clone());
 
-    let token0 = admin.call(entrypoint_callable, "token0", vec![])?;
-    let token0_address: H160 =
-        entrypoint_callable.decode_output("token0", unpack_execution(token0)?)?;
-    let token0_address_bytes = B160::from(token0_address.as_fixed_bytes());
-    let token0_contract =
-        SimulationContract::bind(mock_erc20::MOCKERC20_ABI.clone(), token0_address_bytes);
+    let token_1_address = entrypoint.token_1().call().await?;
+    let token1 = mock_erc20::MockERC20::new(token_1_address, deployer.clone());
 
-    let token1 = admin.call(entrypoint_callable, "token1", vec![])?;
-    let token1_address: H160 =
-        entrypoint_callable.decode_output("token1", unpack_execution(token1)?)?;
-    let token1_address_bytes = B160::from(token1_address.as_fixed_bytes());
-    let token1_contract =
-        SimulationContract::bind(mock_erc20::MOCKERC20_ABI.clone(), token1_address_bytes);
 
-    let actor = admin.call(entrypoint_callable, "actor", vec![])?;
-    let actor_address: H160 =
-        entrypoint_callable.decode_output("actor", unpack_execution(actor)?)?;
-    let actor_address_bytes = B160::from(actor_address.as_fixed_bytes());
-    let actor_contract = SimulationContract::bind(actor::ACTOR_ABI.clone(), actor_address_bytes);
+
+    let actor_address = entrypoint.actor().call().await?;
+
+    let actor = actor::Actor::new(actor_address, deployer.clone());
 
     let mut exec = calls::Caller::new(admin);
 

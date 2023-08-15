@@ -10,10 +10,10 @@ function get(bytes32 slot) view returns (bytes32 value) {
 }
 
 abstract contract ArbiterContract {
-    function start(bytes memory input)
+    function start(address weth_, address portfolio)
         public
         virtual
-        returns (bytes memory output);
+        {}
 
     function step(bytes memory input)
         public
