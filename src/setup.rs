@@ -1,9 +1,10 @@
-use arbiter_core::{middleware::RevmMiddleware, bindings::liquid_exchange::LiquidExchange};
+use arbiter_core::{middleware::RevmMiddleware, bindings::liquid_exchange::LiquidExchange, math::float_to_wad};
 use std::sync::Arc;
 use crate::bindings::{external_normal_strategy_lib, i_portfolio_actions::CreatePoolCall, actor, entrypoint::Entrypoint, exchange, mock_erc20, portfolio, weth::WETH};
+use crate::common;
 // dynamic imports... generate with build.sh
 use ethers::{
-    abi::{encode_packed, Token, Tokenize},
+    abi::{encode_packed, Token, Tokenize, token},
     prelude::{Address, U128, U256},
     types::{H160, Bytes},
 };
@@ -49,15 +50,20 @@ pub async fn run(
 
     let actor = actor::Actor::new(actor_address, deployer.clone());
 
-    let mut exec = calls::Caller::new(admin);
+    // let mut exec = calls::Caller::new(admin);
 
-    let approve_args = (recast_address(portfolio_contract.address), U256::MAX).into_tokens();
-    let mint_args = (
-        recast_address(B160::from_low_u64_be(common::ARBITRAGEUR_ADDRESS_BASE)),
-        float_to_wad(50.0),
-    )
-        .into_tokens();
-    let mint_exchange_args = (exchange_address, float_to_wad(88888888888888.0)).into_tokens();
+    // let approve_args = (portfolio.address(), U256::MAX);
+    // let mint_args = (
+    //     recast_address(B160::from_low_u64_be(common::ARBITRAGEUR_ADDRESS_BASE)),
+    //     float_to_wad(50.0),
+    // )
+    //     .into_tokens();
+    // let mint_exchange_args = (exchange_address, float_to_wad(88888888888888.0)).into_tokens();
+
+    token0.approve(portfolio.address(), U256::MAX).await?;
+    token1.approve(portfolio.address(), U256::MAX).await?;
+
+    token0.mint(common::ARBITRAGEUR_ADDRESS_BASE, float_to_wad(50.0)).await?;
 
     exec.call(&token0_contract, "approve", approve_args.clone())?;
     exec.call(&token1_contract, "approve", approve_args.clone())?;
