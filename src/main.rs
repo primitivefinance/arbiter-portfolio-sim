@@ -1,7 +1,7 @@
-mod cli;
-mod setup;
 mod bindings;
+mod cli;
 mod common;
+mod setup;
 /// # Proto Sim
 /// Proof of concept simulation of EVM execution with an arbitrageur agent,
 /// price process, "centralized" exchange, and the Portfolio protocol.
